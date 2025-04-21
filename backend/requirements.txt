@@ -1,0 +1,5 @@
+# Backend dependencies
+fastapi
+uvicorn
+pillow
+# Add more as needed: numpy, torch, tensorflow, etc.

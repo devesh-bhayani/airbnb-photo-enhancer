@@ -1,0 +1,23 @@
+# Python
+venv/
+__pycache__/
+*.pyc
+
+# Node
+node_modules/
+build/
+dist/
+
+# Data
+backend/data/raw/
+backend/data/processed/
+*.jpg
+*.png
+*.jpeg
+*.bmp
+*.tiff
+*.gif
+
+# Misc
+.DS_Store
+.env

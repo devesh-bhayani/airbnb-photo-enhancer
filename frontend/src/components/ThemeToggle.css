@@ -1,0 +1,61 @@
+.theme-navbar-toggle {
+  display: flex;
+  background: #f5f7fa;
+  border-radius: 2em;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.07);
+  overflow: hidden;
+  border: 2px solid #e3e8ee;
+  height: 40px;
+  position: relative;
+  min-width: 170px;
+}
+.theme-btn {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  font-size: 1.13em;
+  font-weight: 600;
+  background: none;
+  border: none;
+  outline: none;
+  padding: 0 22px;
+  height: 100%;
+  color: #3a3a3a;
+  cursor: pointer;
+  position: relative;
+  z-index: 2;
+  transition: color 0.18s;
+}
+.theme-btn.active {
+  color: #fff;
+}
+.theme-btn .theme-icon {
+  font-size: 1.2em;
+}
+.sun-navbar {
+  color: #f5b700;
+}
+.moon-navbar {
+  color: #fff;
+}
+.theme-navbar-toggle .slider-bg {
+  position: absolute;
+  top: 4px;
+  bottom: 4px;
+  left: 4px;
+  width: calc(50% - 6px);
+  border-radius: 2em;
+  background: #38404a;
+  z-index: 1;
+  transition: left 0.3s cubic-bezier(.4,1.4,.4,1), background 0.25s;
+}
+.theme-navbar-toggle.dark .slider-bg {
+  left: calc(50% + 2px);
+  background: #38404a;
+}
+.theme-navbar-toggle.light .slider-bg {
+  left: 4px;
+  background: #38404a;
+}
