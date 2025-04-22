@@ -13,6 +13,7 @@ import ThemeToggle from './components/ThemeToggle';
 import './components/ModeToggle.css';
 import ImageCropAlign from './components/ImageCropAlign';
 import UndoRedoControls from './components/UndoRedoControls';
+import PremiumModal from './components/PremiumModal';
 import { enhanceImage, login, fetchAnalytics } from './api';
 
 export const ThemeContext = createContext();
@@ -57,6 +58,8 @@ function App() {
   const [history, setHistory] = useState([]); // [{beforeImg, afterImg, params...}]
   const [redoStack, setRedoStack] = useState([]);
   const [cropStage, setCropStage] = useState(false);
+  const [isPremiumUser, setIsPremiumUser] = useState(false); // Premium state
+  const [showPremiumModal, setShowPremiumModal] = useState(false); // Modal state
   const latestFileRef = useRef(null);
   const debounceTimeout = useRef(null);
 
@@ -278,6 +281,25 @@ function App() {
     }
   };
 
+  // Premium AI Enhancement Handler
+  const handlePremiumEnhance = async () => {
+    if (!file) return;
+    setLoading(true);
+    setError(null);
+    setSuccess(null);
+    try {
+      // Simulate premium AI enhancement by passing a premium flag (or use a special endpoint in the future)
+      const enhancedUrl = await enhanceImage(file, strength, vignetteStrength, warmth, saturation, sharpness, floorSharpness, false, floorMask, true);
+      setAfterImg(enhancedUrl);
+      setSuccess('Premium AI Enhancement applied!');
+    } catch (e) {
+      setAfterImg(null);
+      setError('Premium enhancement failed. Please try again.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   if (!isLoggedIn) {
     return (
       <ThemeContext.Provider value={{ theme, setTheme }}>
@@ -310,9 +332,32 @@ function App() {
               <button className="action-btn" onClick={handleCancelStaged}>Cancel</button>
             </div>
           )}
-          <button onClick={() => setSelectingFloor(true)} className="floor-btn">Select Floor Region</button>
+          <button onClick={() => setIsPremiumUser(true)} className="premium-btn">Become Premium (Demo)</button>
+          <button onClick={() => {
+            if (isPremiumUser) {
+              handleFetchAnalytics();
+            } else {
+              setShowPremiumModal(true);
+            }
+          }} className="analytics-btn">
+            Show Analytics {isPremiumUser ? '' : <span style={{color:'#d99d00',marginLeft:6}}>&#128274; Premium</span>}
+          </button>
           <button onClick={handleRemoveGlare} className="glare-btn" disabled={!file || loading}>Remove Glare (Beta)</button>
-          <button onClick={handleFetchAnalytics} className="analytics-btn">Show Analytics</button>
+          <button onClick={() => setSelectingFloor(true)} className="floor-btn">Select Floor Region</button>
+          <button
+            className="premium-btn"
+            style={{width:'100%',marginTop:10,background:'#ffd700',color:'#333',fontWeight:700}}
+            onClick={() => {
+              if (isPremiumUser) {
+                handlePremiumEnhance();
+              } else {
+                setShowPremiumModal(true);
+              }
+            }}
+            disabled={!file || loading}
+          >
+            Premium AI Enhance {isPremiumUser ? '' : <span style={{color:'#d99d00',marginLeft:6}}>&#128274; Premium</span>}
+          </button>
         </div>
         <div className="preview-panel">
           {/* Undo/Redo Controls */}
@@ -341,6 +386,7 @@ function App() {
         </div>
       )}
       {analytics && <div className="analytics-dashboard"><AnalyticsDashboard data={analytics} /></div>}
+      {showPremiumModal && <PremiumModal onClose={() => setShowPremiumModal(false)} />}
       <footer className="footer">
         &copy; {new Date().getFullYear()} Airbnb Photo Enhancer &mdash; Crafted with <span className="heart-icon">&#10084;</span> for hosts.
       </footer>

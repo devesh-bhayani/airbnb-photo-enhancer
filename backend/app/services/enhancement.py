@@ -7,6 +7,16 @@ from PIL import Image
 import numpy as np
 import cv2
 from typing import Optional, List, Dict
+import requests
+import base64
+import replicate
+import os
+from dotenv import load_dotenv
+
+# --- Load .env file and API keys from environment variables ---
+load_dotenv()
+IMGBB_API_KEY = os.environ.get("IMGBB_API_KEY", "")
+REPLICATE_API_TOKEN = os.environ.get("REPLICATE_API_TOKEN", "")
 
 def polygon_to_mask(points: List[Dict[str, float]], shape):
     mask = np.zeros(shape[:2], dtype=np.uint8)
@@ -15,6 +25,19 @@ def polygon_to_mask(points: List[Dict[str, float]], shape):
         pts = pts.reshape((-1, 1, 2))
         cv2.fillPoly(mask, [pts], 1)
     return mask
+
+
+def upload_to_imgbb(image_bytes: bytes, imgbb_api_key: str) -> str:
+    url = "https://api.imgbb.com/1/upload"
+    payload = {
+        "key": imgbb_api_key,
+        "image": base64.b64encode(image_bytes).decode('utf-8')
+    }
+    response = requests.post(url, data=payload)
+    response.raise_for_status()
+    image_url = response.json()['data']['url']
+    return image_url
+
 
 def enhance_image(
     image_bytes: bytes,
@@ -25,17 +48,57 @@ def enhance_image(
     sharpness: float = 1.0,
     floor_sharpness: float = 0,
     remove_glare: bool = False,
-    floor_mask: list = None
+    floor_mask: list = None,
+    premium: bool = False
 ) -> bytes:
     """
     Enhance the input image using user-adjustable parameters for strength, vignette, warmth, saturation, and sharpness.
+    If premium=True, use Replicate's magic-image-refiner for advanced AI enhancement.
     """
+    if premium:
+        # --- Use Replicate's magic-image-refiner for premium enhancement ---
+        image_url = upload_to_imgbb(image_bytes, IMGBB_API_KEY)
+        client = replicate.Client(api_token=REPLICATE_API_TOKEN)
+        output = client.run(
+            "batouresearch/magic-image-refiner",
+            input={
+                "image": image_url,
+                "resemblance": 0.75,
+                "creativity": 0.25
+            }
+        )
+        enhanced_img_url = output  # output is a URL to the enhanced image
+        enhanced_img_bytes = requests.get(enhanced_img_url).content
+        return enhanced_img_bytes
+
+    # --- Normal enhancement pipeline continues below ---
     with BytesIO(image_bytes) as input_buffer:
         pil_img = Image.open(input_buffer).convert('RGB')
         img = np.array(pil_img)
 
     result = img.astype(np.float32)
 
+    # --- PREMIUM ENHANCEMENT LOGIC ---
+    # Stronger denoising, more vibrant color, and extra sharpening for premium users
+    # (Replace or extend this block with your best AI model in production)
+    # Boost color
+    result = np.clip(result * 1.03, 0, 255)  # Slightly more vibrant
+    # Extra gamma correction
+    gamma = 1.25 + 0.15 * (strength-1)
+    invGamma = 1.0 / gamma
+    table = np.array([((i / 255.0) ** invGamma) * 255 for i in np.arange(256)]).astype("uint8")
+    result = cv2.LUT(result.astype(np.uint8), table)
+    # Extra sharpening
+    kernel_strength = 1.6 + (sharpness - 1.0) * 2
+    kernel = np.array([[0, -1, 0],
+                       [-1, 4 * kernel_strength + 1, -1],
+                       [0, -1, 0]]) / (4 * kernel_strength + 1)
+    result = cv2.filter2D(result, -1, kernel)
+    # Stronger denoising
+    result = cv2.fastNlMeansDenoisingColored(result.astype(np.uint8), None, 8, 8, 7, 21)
+    # Continue with normal pipeline below, but on already enhanced image
+
+    # --- Normal pipeline continues below ---
     # Auto White Balance (Gray World Assumption)
     avg_b = np.mean(result[:,:,0])
     avg_g = np.mean(result[:,:,1])
